@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import importlib
 
 # START: Frawned approach to change default encoding
 # But I intentionally take this approach since it's easy and believe it non-problematic in this limited program.
 # See discussion detail here.
 # https://stackoverflow.com/questions/3828723/why-should-we-not-use-sys-setdefaultencodingutf-8-in-a-py-script
-reload(sys)
-sys.setdefaultencoding('UTF8')
+# importlib.reload(sys)
+# sys.setdefaultencoding('UTF8')
 # END: Frawned approach to change default encoding
 
-import StringIO
+import io
 import os
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
@@ -41,7 +42,7 @@ def save_snapshot(driver, word, idx):
     idx = "%03d" % (idx + 1)
 
     if os.path.isfile(fname) and (not Options.force_save):
-        print("  ! %s: %s exists!" % (idx, fname))
+        print(("  ! %s: %s exists!" % (idx, fname)))
         return
 
     url_template = Engines[Options.engine]
@@ -54,10 +55,11 @@ def save_snapshot(driver, word, idx):
     driver.execute_script("document.body.style.overflow = 'hidden';")
 
     # See: https://gist.github.com/jsok/9502024
-    screen = driver.get_screenshot_as_png()
-    image = Image.open(StringIO.StringIO(screen))
+    screen_png = driver.get_screenshot_as_png()
+    screen_io = io.BytesIO(screen_png)
+    image = Image.open(screen_io)
     image.convert("RGB").save(fname, 'JPEG', optimize=True)
-    print("  %s %s: %s" % (u'\u2713', idx, fname))
+    print(("  %s %s: %s" % ('\u2713', idx, fname)))
     time.sleep(Options.sleep)
 
 def get_words_from_file(fname):
@@ -91,13 +93,13 @@ def main():
     parser.add_option("-f", "--force-save", action="store_true", dest="force_save", help="Overwrite existing file if exists", default=False)
     parser.add_option("-p", "--prefix", dest="prefix", help="Prefix for filename", default="")
     parser.add_option("-w", "--window", dest="window", help="Window size. 1280x720 by default.", default="1280x720")
-    parser.add_option("-e", "--engine", dest="engine", help="Image search engine to use one of %s" % Engines.keys(), default="google")
+    parser.add_option("-e", "--engine", dest="engine", help="Image search engine to use one of %s" % list(Engines.keys()), default="google")
     parser.add_option("-s", "--show", action="store_true", dest="show", help="Do not hide chrome browser", default=False)
     parser.add_option("--sleep", dest="sleep", type="float", help="Sleep duration on each take", default=1.0)
     (Options, args) = parser.parse_args()
 
     if Options.engine not in Engines:
-        print("Engine must be one of %s" % Engines.keys())
+        print(("Engine must be one of %s" % list(Engines.keys())))
         exit(1)
 
     chrome_options = webdriver.ChromeOptions()
@@ -113,7 +115,7 @@ def main():
     mkdir_p(Options.dir)
 
     for file in args:
-        print(file + ': start')
+        print((file + ': start'))
         retrieve_snapshot_for_words(driver, get_words_from_file(file))
     driver.quit()
 
